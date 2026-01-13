@@ -6,6 +6,8 @@ import os
 import time
 from mediapipe import solutions
 from mediapipe.framework.formats import landmark_pb2
+from line import Line
+from point import Point
 
 #for getting landmarks
 model_path = 'hand_landmarker.task'
@@ -27,6 +29,7 @@ HANDEDNESS_TEXT_COLOR = (88, 205, 54) # vibrant green
 #result from landmarks
 latest_result = None
 latest_frame = None
+main_line: Line
 
 def main():
     print("hello")
@@ -73,8 +76,24 @@ def draw_landmarks_on_image(rgb_image, detection_result):
 def save_result(result: HandLandmarkerResult, output_image: mp.Image, timestamp_ms: int):
     # to print results 
     # print('hand landmarker result: {}'.format(result))
-    global latest_result
+    global latest_result, main_line
     latest_result = result
+
+    process_line(result)
+    
+def process_line(result: HandLandmarkerResult):
+    global main_line
+    lm = result.hand_landmarks[0]
+    thumb_point = Point(lm[3].x, lm[3].y, lm[3].z)
+    pointer_point = Point(lm[7].x, lm[7].y, lm[7].z)
+    if main_line is None:
+        handedness = result.handedness[0].category_name
+        h = False
+        if handedness == "right hand":
+            h = True
+        main_line = Line(thumb_point, pointer_point, h)
+    else:
+        main_line.change_line(thumb_point, pointer_point)
 
 def camera():
     global latest_result
